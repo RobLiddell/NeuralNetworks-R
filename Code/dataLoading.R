@@ -29,16 +29,6 @@ getIDXFileInfo <- function(con){
   
   return(conInfo)
 }
-
-
-imgInfo <- getIDXFileInfo(imgCon)
-lblInfo <- getIDXFileInfo(lblCon)
-
-nImg <- imgInfo$dims[1]
-nRow <- imgInfo$dims[2]
-nCol <- imgInfo$dims[3]
-
-
 getNextNLabeledImages <- function(imgCon,lblCon,N=1,nRow=28,nCol=28){
   currLoc=((seek(imgCon)-16)/(nRow*nCol))+8
   
@@ -56,17 +46,46 @@ getNextNLabeledImages <- function(imgCon,lblCon,N=1,nRow=28,nCol=28){
 }
 
 
-imageDat <- getNextNLabeledImages(imgCon,lblCon,N=4)
+imgInfo <- getIDXFileInfo(imgCon)
+lblInfo <- getIDXFileInfo(lblCon)
 
-par(mfrow=c(2,2))
+nImg <- imgInfo$dims[1]
+nRow <- imgInfo$dims[2]
+nCol <- imgInfo$dims[3]
 
-for(i in 1:4){
-  imageDat$Images[i,]|>
-    matrix(nrow = 28,byrow = T)|>
-    as.raster(max=255L,min)|>
+
+
+if(FALSE){
+
+  imageDat <- getNextNLabeledImages(imgCon,lblCon,N=5000)
+  
+  
+  
+  imageDat <- getNextNLabeledImages(imgCon,lblCon,N=4)
+  
+  par(mfrow=c(2,2))
+  
+  for(i in 1:4){
+    imageDat$Images[i,]|>
+      matrix(nrow = 28,byrow = T)|>
+      as.raster(max=255L)|>
+      plot()
+  }
+  
+  
+  close(imgCon)
+  close(lblCon)
+  
+  
+  imageDat|>
+    tibble::as.tibble()|>
+    dplyr::select(Images)|>
+    dplyr::slice(1)%>%
+    dplyr::pull()|>
+    matrix(nrow=28,byrow = T)|>
+    as.raster(max=255L)|>
     plot()
+  
+  
 }
 
-
-close(imgCon)
-close(lblCon)
