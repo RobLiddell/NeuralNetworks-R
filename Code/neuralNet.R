@@ -1,6 +1,28 @@
 source('Code\\dataLoading.R')
 source('Code\\propFunctions.R')
 
+
+ReLu <- function(x){
+  y <- pmax(x,0)
+  return(y)
+}
+ReLu_Der <-  function(x){
+  deriv <- (x>0) |> as.numeric()
+  return(deriv)
+}
+softMax <- function(x){
+  y <- x/colSums(x)
+  return(y)
+}
+softMax_Der <- function(x){
+  return(1)
+}
+oneHot <- function(x){
+  oneHotLab <- matrix(0,nrow=10,ncol=length(x))
+  oneHotLab[cbind(x+1,1:length(x))] <- 1
+  return(oneHotLab)
+}
+
 forwardProp <- function(NN,X){
   Z <- list()
   A <- list()
@@ -106,23 +128,5 @@ gradientDescent <- function(NN, trainingData, iterations, alpha){
   return(NN)
 }
 
-imgData <- getNextNLabeledImages(imgCon,lblCon, N=12)
-close(imgCon)
-close(lblCon)
-
-NN <- initNN(c(784,36,10))|>
-  gradientDescent(imgData,4000,0.1)
-
-NN <- NN|>
-  gradientDescent(imgData,2000,0.1)
 
 
-
-makePredictions(NN,imgData$Images[1:12,])
-plotXNumbers(imgData,1:12,3,4)
-
-
-
-matrix(1:12,nrow=3)
-matrix(1:12,nrow=3)|>
-  sweep(1,matrix(1:3,nrow=3),FUN='-')
