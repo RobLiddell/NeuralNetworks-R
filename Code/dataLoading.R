@@ -4,8 +4,8 @@ fileLoc <- "C:\\Users\\user\\Documents\\Databases\\MNIST\\"
 imgFiles <- c('train-images.idx3-ubyte')
 labelFiles <- c('train-labels.idx1-ubyte')
 
-imgCon <- file(str_glue('{fileLoc}{imgFiles}'),'rb')
-lblCon <- file(str_glue('{fileLoc}{labelFiles}'),'rb')
+imgCon <- file(str_glue('{fileLoc}{imgFiles}'),open='rb')
+lblCon <- file(str_glue('{fileLoc}{labelFiles}'),open='rb')
 
 
 getIDXFileInfo <- function(con){
@@ -38,13 +38,24 @@ getNextNLabeledImages <- function(imgCon,lblCon,N=1,nRow=28,nCol=28){
   
   img <- readBin(imgCon,raw(),n=N*nRow*nCol)|>
     as.integer()|>
-    matrix(ncol=nRow*nCol,byrow = TRUE)
+    matrix(ncol=nRow*nCol,byrow = TRUE)/255
   
   
   
   return(list(Labels=lbls,Images=img))
 }
-
+plotNumber <- function(imgData,figure=1){
+  imgData$Images[figure,]|>
+    matrix(nrow=28,byrow = T)|>
+    as.raster()|>
+    plot()
+}
+plotXNumbers <- function(imgData,figs,nrow,ncol){
+  par(mfrow=c(nrow,ncol))
+  for(i in figs){
+    plotNumber(imgData,i)
+  }
+}
 
 imgInfo <- getIDXFileInfo(imgCon)
 lblInfo <- getIDXFileInfo(lblCon)
