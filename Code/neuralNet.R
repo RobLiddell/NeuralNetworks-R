@@ -1,7 +1,3 @@
-source('Code\\dataLoading.R')
-source('Code\\propFunctions.R')
-
-
 ReLu <- function(x){
   y <- pmax(x,0)
   return(y)
@@ -11,7 +7,7 @@ ReLu_Der <-  function(x){
   return(deriv)
 }
 softMax <- function(x){
-  y <- x/colSums(x)
+  y <- t(t(exp(x))/colSums(exp(x)))
   return(y)
 }
 softMax_Der <- function(x){
@@ -22,26 +18,26 @@ oneHot <- function(x){
   oneHotLab[cbind(x+1,1:length(x))] <- 1
   return(oneHotLab)
 }
-
 forwardProp <- function(NN,X){
   Z <- list()
   A <- list()
-  
+
   Z[[1]] <- NN$weights[[1]]%*%X|>
     sweep(1,(NN$biases[[1]]),'+')
   A[[1]] <- ReLu(Z[[1]])
   
   for(i in 2:NN$nLayers){
+    
     Z[[i]] <- NN$weights[[i]]%*%A[[i-1]]|>
       sweep(1,(NN$biases[[i]]),'+')
-    if(i==NN$nLayers){
-      break()
+    
+    if(i<NN$nLayers){
+        A[[i]] <- ReLu(Z[[i]])
     }
-    A[[i]] <- ReLu(Z[[i]])
   }
   
   A[[NN$nLayers]] <- softMax(Z[[NN$nLayers]])
-  
+
   return(list(Z=Z,A=A))
   
 }
@@ -53,7 +49,7 @@ backProp <- function(NNout,NN,X,Y){
   m=length(Y)
   oneHotLab <- oneHot(Y)
   
-  dZ[[NN$nLayers]] <- (NNout$A[[NN$nLayers]] - oneHotLab) * softMax_Der(NNout$Z[[NN$nLayers]])
+  dZ[[NN$nLayers]] <- (NNout$A[[NN$nLayers]] - oneHotLab)
   dW[[NN$nLayers]] <- (dZ[[NN$nLayers]]%*%t(NNout$A[[NN$nLayers-1]]))/m
   db[[NN$nLayers]] <- rowSums(dZ[[NN$nLayers]])/m
   
@@ -71,11 +67,13 @@ backProp <- function(NNout,NN,X,Y){
   dW[[1]] <- (dZ[[1]]%*%X)/m
   db[[1]] <- rowSums(dZ[[1]])/m
   
+  # browser()
+  
   return(list(dW=dW,db=db))
 }
 updateParams<- function(NN,wbErr,alpha){
   
-  for(i in NN$nLayers){
+  for(i in 1:NN$nLayers){
     NN$weights[[i]] <- NN$weights[[i]]-alpha*wbErr$dW[[i]]
     NN$biases[[i]] <- NN$biases[[i]]-alpha*wbErr$db[[i]]
   }
@@ -92,6 +90,14 @@ getAccuracy <- function(pred,ans){
   accuracy <- (pred==ans)|>
     sum()/length(ans)
   return(accuracy)
+}
+getCost <- function(NNout,labels){
+  nLayers <- length(NNout$A)
+  
+  cost <- sum(-log(colSums(NNout$A[[nLayers]]*oneHot(labels))))/length(labels)
+  
+  # cost <- sum((NNout$A[[nLayers]]-oneHot(labels))^2)/length(labels)
+  return(cost)
 }
 makePredictions <- function(NN,images){
   output <- forwardProp(NN,t(images))
@@ -115,18 +121,22 @@ initNN <- function(sizes=c(784,36,10)){
   return(NN)
 }
 gradientDescent <- function(NN, trainingData, iterations, alpha){
-
     for(i in 1:iterations){
     NNout <- forwardProp(NN,t(trainingData$Images))
     wbErr <- backProp(NNout,NN,trainingData$Images,trainingData$Labels)
     NN <- updateParams(NN,wbErr,alpha)
     if(i%%50==0){
       cat('Iteration: ',i,';')
-      cat('Accuracy: ', getAccuracy(getPredictions(NNout$A[[NN$nLayers]]),trainingData$Label),'......\n')
+      cat('Accuracy: ', getAccuracy(getPredictions(NNout$A[[NN$nLayers]]),trainingData$Label),'; ')
+      cat('Cost: ', getCost(NNout,trainingData$Label),'......\n')
     }
   }
   return(NN)
 }
 
+temp <- matrix(1:12,nrow=3)
+t(t(temp)/colSums(temp))
 
+softMax(temp)
 
+apply(temp,1,function(x) exp(x)/sum(exp(x)))
