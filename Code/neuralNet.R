@@ -1,23 +1,53 @@
+####Initialize Neural Network####
+initNN <- function(sizes=c(784,36,10)){
+  
+  biases <- list()
+  weights <- list()
+  
+  for(i in 2:length(sizes)){
+    biases[[i-1]] <- matrix(runif(sizes[i])-0.5,ncol=1)
+    weights[[i-1]] <- matrix(runif(sizes[i]*sizes[i-1])-0.5,nrow=sizes[i])
+  }
+  
+  NN <- list(nLayers=length(sizes)-1,
+             weights=weights,
+             biases=biases)
+  
+  return(NN)
+}
+
+####Activation Functions####
+
 ReLu <- function(x){
   y <- pmax(x,0)
   return(y)
 }
+
+
 ReLu_Der <-  function(x){
   deriv <- (x>0) |> as.numeric()
   return(deriv)
 }
+
+
 softMax <- function(x){
   y <- t(t(exp(x))/colSums(exp(x)))
   return(y)
 }
+
+
 softMax_Der <- function(x){
   return(1)
 }
+
+####Label Encoding####
 oneHot <- function(x){
   oneHotLab <- matrix(0,nrow=10,ncol=length(x))
   oneHotLab[cbind(x+1,1:length(x))] <- 1
   return(oneHotLab)
 }
+
+####Gradient Descent Functions
 forwardProp <- function(NN,X){
   Z <- list()
   A <- list()
@@ -41,6 +71,8 @@ forwardProp <- function(NN,X){
   return(list(Z=Z,A=A))
   
 }
+
+
 backProp <- function(NNout,NN,X,Y){
   dZ <- list()
   dW <- list()
@@ -71,6 +103,8 @@ backProp <- function(NNout,NN,X,Y){
   
   return(list(dW=dW,db=db))
 }
+
+
 updateParams<- function(NN,wbErr,alpha){
   
   for(i in 1:NN$nLayers){
@@ -80,45 +114,8 @@ updateParams<- function(NN,wbErr,alpha){
   
   return(NN)
 }
-getPredictions <- function(output){
-  preds <- output|>
-    apply(2, which.max)-1
-  return(preds)
-}
-getAccuracy <- function(pred,ans){
-  accuracy <- (pred==ans)|>
-    sum()/length(ans)
-  return(accuracy)
-}
-getCost <- function(NNout,labels){
-  nLayers <- length(NNout$A)
-  
-  cost <- sum(-log(colSums(NNout$A[[nLayers]]*oneHot(labels))))/length(labels)
-  
-  # cost <- sum((NNout$A[[nLayers]]-oneHot(labels))^2)/length(labels)
-  return(cost)
-}
-makePredictions <- function(NN,images){
-  output <- forwardProp(NN,t(images))
-  pred <- getPredictions(output$A[[NN$nLayers]])
-  return(pred)
-}
-initNN <- function(sizes=c(784,36,10)){
-  
-  biases <- list()
-  weights <- list()
-  
-  for(i in 2:length(sizes)){
-    biases[[i-1]] <- matrix(runif(sizes[i])-0.5,ncol=1)
-    weights[[i-1]] <- matrix(runif(sizes[i]*sizes[i-1])-0.5,nrow=sizes[i])
-  }
-  
-  NN <- list(nLayers=length(sizes)-1,
-             weights=weights,
-             biases=biases)
-  
-  return(NN)
-}
+
+
 gradientDescent <- function(NN, trainingData, iterations, alpha,silent=F){
   for(i in 1:iterations){
     NNout <- forwardProp(NN,t(trainingData$Images))
@@ -132,6 +129,73 @@ gradientDescent <- function(NN, trainingData, iterations, alpha,silent=F){
   }
   return(NN)
 }
+
+
+SGD <- function(NN,trainingCon,testingCon,iterations=5,nTraining=60000,step=100){
+  resetCons(trainingCon)
+  resetCons(testingCon)
+  testingData <- getNextNLabeledImages(testingCon,10000)
+  
+  testAcc <- c()
+  trainAcc <- c()
+  
+  for(i in 1:iterations){
+    cat('Epoch ', i,':')
+    for(j in 1:(nTraining/step)){
+      trainingData <- getNextNLabeledImages(trainingCon,step)
+      if(j%%10==0){
+        cat(j)
+        trainAcc <- append(trainAcc,testAccuracy(NN, trainingData))
+        testAcc <- append(testAcc,testAccuracy(NN, testingData))
+      }else{
+        cat('.')
+      }
+      NN <- NN|>
+        gradientDescent(trainingData,5,0.1,silent=T)
+    }
+    cat('\n\tAccuracy:',testAccuracy(NN, trainingData),'\n')
+    trainAcc <- append(trainAcc,testAccuracy(NN, trainingData))
+    testAcc <- append(testAcc,testAccuracy(NN, testingData))
+    resetCons(trainingCon) 
+  }
+  resetCons(testingCon) 
+  plot(trainAcc)
+  lines(testAcc)
+  return(NN)
+}
+
+
+#Progress Tracking
+getPredictions <- function(output){
+  preds <- output|>
+    apply(2, which.max)-1
+  return(preds)
+}
+
+
+getAccuracy <- function(pred,ans){
+  accuracy <- (pred==ans)|>
+    sum()/length(ans)
+  return(accuracy)
+}
+
+
+getCost <- function(NNout,labels){
+  nLayers <- length(NNout$A)
+  
+  cost <- sum(-log(colSums(NNout$A[[nLayers]]*oneHot(labels))))/length(labels)
+  
+  # cost <- sum((NNout$A[[nLayers]]-oneHot(labels))^2)/length(labels)
+  return(cost)
+}
+
+
+makePredictions <- function(NN,images){
+  output <- forwardProp(NN,t(images))
+  pred <- getPredictions(output$A[[NN$nLayers]])
+  return(pred)
+}
+
 
 testAccuracy <- function(NN,data){
   pred <- makePredictions(NN,data$Images)
