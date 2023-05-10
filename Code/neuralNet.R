@@ -86,7 +86,6 @@ getPredictions <- function(output){
   return(preds)
 }
 getAccuracy <- function(pred,ans){
-  # cat(paste0(pred,":", ans),"\n")
   accuracy <- (pred==ans)|>
     sum()/length(ans)
   return(accuracy)
@@ -120,12 +119,12 @@ initNN <- function(sizes=c(784,36,10)){
   
   return(NN)
 }
-gradientDescent <- function(NN, trainingData, iterations, alpha){
-    for(i in 1:iterations){
+gradientDescent <- function(NN, trainingData, iterations, alpha,silent=F){
+  for(i in 1:iterations){
     NNout <- forwardProp(NN,t(trainingData$Images))
     wbErr <- backProp(NNout,NN,trainingData$Images,trainingData$Labels)
     NN <- updateParams(NN,wbErr,alpha)
-    if(i%%50==0){
+    if(i%%50==0&!silent){
       cat('Iteration: ',i,';')
       cat('Accuracy: ', getAccuracy(getPredictions(NNout$A[[NN$nLayers]]),trainingData$Label),'; ')
       cat('Cost: ', getCost(NNout,trainingData$Label),'......\n')
@@ -134,9 +133,8 @@ gradientDescent <- function(NN, trainingData, iterations, alpha){
   return(NN)
 }
 
-temp <- matrix(1:12,nrow=3)
-t(t(temp)/colSums(temp))
-
-softMax(temp)
-
-apply(temp,1,function(x) exp(x)/sum(exp(x)))
+testAccuracy <- function(NN,data){
+  pred <- makePredictions(NN,data$Images)
+  acc <- getAccuracy(pred,data$Labels)
+  return(acc)
+}

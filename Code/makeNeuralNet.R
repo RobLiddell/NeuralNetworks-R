@@ -1,33 +1,55 @@
 source('Code\\dataLoading.R')
 source('Code\\neuralNet.R')
 
-imgData <- getNextNLabeledImages(imgCon,lblCon, N=500)
-
-
-NN <- initNN(c(784,36,10,10))|>
-  gradientDescent(imgData,500,0.1)
-
-NN <- NN|>
-  gradientDescent(imgData,2000,0.1)
 
 
 
-makePredictions(NN,imgData$Images[1:12,])
-plotXNumbers(imgData,1:12,3,4)
-
-
-SGD <- function(NN,imgCon,lblCon,iterations=1000,nTraining=60000,step=500){
+SGD <- function(NN,trainingCon,testingCon,iterations=5,nTraining=60000,step=100){
+  resetCons(trainingCon)
+  resetCons(testingCon)
+  testingData <- getNextNLabeledImages(testingCon,10000)
+  
+  testAcc <- c()
+  trainAcc <- c()
   
   for(i in 1:iterations){
-    trainingDat <- getNextNLabeledImages(imgCon,lblCon,step)
-    NN <- NN|>
-      gradientDescent(trainingDat,nTraining/step,0.1)
+    cat('Epoch ', i,':')
+    for(j in 1:(nTraining/step)){
+      trainingData <- getNextNLabeledImages(trainingCon,step)
+      if(j%%10==0){
+        cat(j)
+        trainAcc <- append(trainAcc,testAccuracy(NN, trainingData))
+        testAcc <- append(testAcc,testAccuracy(NN, testingData))
+      }else{
+        cat('.')
+      }
+      NN <- NN|>
+        gradientDescent(trainingData,5,0.1,silent=T)
+    }
+    cat('\n\tAccuracy:',testAccuracy(NN, trainingData),'\n')
+    trainAcc <- append(trainAcc,testAccuracy(NN, trainingData))
+    testAcc <- append(testAcc,testAccuracy(NN, testingData))
+    resetCons(trainingCon) 
   }
+  resetCons(testingCon) 
+  plot(trainAcc)
+  lines(testAcc)
+  return(NN)
 }
 
+NN <- initNN(c(784,36,10,10))|>
+  SGD(trainingCon,testingCon,iterations=3,nTraining = 60000,step=500)
 
-close(imgCon)
-close(lblCon)
 
 
+
+
+
+
+
+
+testData <- getNextNLabeledImages(testingCon,12)
+
+makePredictions(NN,testData$Image)
+plotXNumbers(testData,1:12,3,4)
 
